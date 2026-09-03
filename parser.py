@@ -7,9 +7,6 @@ from datetime import date, timedelta
 from models import Resource, Seminar
 
 
-DEFAULT_EVENT_YEAR = 2026
-
-
 def _normalise(text: str) -> str:
     text = html.unescape(text or "")
     text = text.replace("\r\n", "\n").replace("\r", "\n")
@@ -79,13 +76,41 @@ def extract_company(text: str) -> str:
     return ""
 
 
+def infer_future_date(month: int, day: int, reference_date: date) -> date | None:
+    """Resolve a yearless month/day to its next occurrence, including today."""
+    for year in range(reference_date.year, reference_date.year + 9):
+        try:
+            candidate = date(year, month, day)
+        except ValueError:
+            continue
+        if candidate >= reference_date:
+            return candidate
+    return None
+
+
 def extract_date(text: str, reference_date: date) -> date | None:
-    explicit = re.search(r"(?<!\d)(\d{1,2})\s*月\s*(\d{1,2})\s*日", text)
+    explicit_chinese = re.search(
+        r"(?<!\d)(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日", text
+    )
+    explicit_numeric = re.search(
+        r"(?<!\d)(20\d{2})\s*[-./]\s*(\d{1,2})\s*[-./]\s*(\d{1,2})(?!\d)", text
+    )
+    explicit = explicit_chinese or explicit_numeric
     if explicit:
         try:
-            return date(DEFAULT_EVENT_YEAR, int(explicit.group(1)), int(explicit.group(2)))
+            return date(
+                int(explicit.group(1)),
+                int(explicit.group(2)),
+                int(explicit.group(3)),
+            )
         except ValueError:
             return None
+
+    month_day = re.search(r"(?<!\d)(\d{1,2})\s*月\s*(\d{1,2})\s*日", text)
+    if month_day:
+        return infer_future_date(
+            int(month_day.group(1)), int(month_day.group(2)), reference_date
+        )
 
     if re.search(r"后天|后晚", text):
         return reference_date + timedelta(days=2)
@@ -277,4 +302,3 @@ def missing_required_fields(seminar: Seminar) -> list[str]:
         ("地点", seminar.location),
     )
     return [name for name, value in fields if not value]
-

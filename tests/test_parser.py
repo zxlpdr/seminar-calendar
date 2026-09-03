@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 
 from database import SeminarDatabase
-from parser import missing_required_fields, parse_seminar
+from parser import extract_date, infer_future_date, missing_required_fields, parse_seminar
 
 
 CRRC_MESSAGE = """🌟 中车戚墅堰所2027届校园招聘宣讲会来啦！！
@@ -83,6 +83,25 @@ class ParserTests(unittest.TestCase):
     def test_missing_required_fields_are_reported(self) -> None:
         item = parse_seminar("某公司招聘，欢迎投递简历", date(2026, 9, 3))
         self.assertEqual(missing_required_fields(item), ["企业", "日期", "开始时间", "地点"])
+
+    def test_yearless_date_rolls_into_next_year(self) -> None:
+        parsed = extract_date("宣讲时间：1月5日 14:00", date(2026, 12, 20))
+        self.assertEqual(parsed, date(2027, 1, 5))
+
+    def test_explicit_event_year_is_preserved(self) -> None:
+        parsed = extract_date("宣讲时间：2025年12月31日 14:00", date(2026, 1, 5))
+        self.assertEqual(parsed, date(2025, 12, 31))
+
+    def test_numeric_explicit_date_is_supported(self) -> None:
+        parsed = extract_date("时间：2027-03-08 09:30", date(2026, 9, 3))
+        self.assertEqual(parsed, date(2027, 3, 8))
+
+    def test_relative_date_crosses_year_boundary(self) -> None:
+        parsed = extract_date("明天下午宣讲", date(2026, 12, 31))
+        self.assertEqual(parsed, date(2027, 1, 1))
+
+    def test_yearless_leap_day_finds_next_valid_occurrence(self) -> None:
+        self.assertEqual(infer_future_date(2, 29, date(2026, 1, 1)), date(2028, 2, 29))
 
 
 class DatabaseTests(unittest.TestCase):

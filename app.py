@@ -10,7 +10,7 @@ from typing import Callable
 
 from database import SeminarDatabase
 from models import Resource, Seminar
-from parser import DEFAULT_EVENT_YEAR, missing_required_fields, parse_seminar
+from parser import infer_future_date, missing_required_fields, parse_seminar
 
 
 APP_TITLE = "宣讲会日历"
@@ -55,8 +55,9 @@ def normalise_time(value: str, required: bool = False) -> str:
     return f"{hour:02d}:{minute:02d}"
 
 
-def parse_date_input(value: str) -> date:
+def parse_date_input(value: str, reference_date: date | None = None) -> date:
     value = value.strip()
+    reference_date = reference_date or date.today()
     for pattern in ("%Y-%m-%d", "%Y/%m/%d"):
         try:
             return datetime.strptime(value, pattern).date()
@@ -64,11 +65,12 @@ def parse_date_input(value: str) -> date:
             pass
     match = re.fullmatch(r"(\d{1,2})\s*月\s*(\d{1,2})\s*日?", value)
     if match:
-        try:
-            return date(DEFAULT_EVENT_YEAR, int(match.group(1)), int(match.group(2)))
-        except ValueError:
-            pass
-    raise ValueError("日期请使用 2026-09-04 或 9月4日 格式")
+        inferred = infer_future_date(
+            int(match.group(1)), int(match.group(2)), reference_date
+        )
+        if inferred is not None:
+            return inferred
+    raise ValueError("日期请使用 YYYY-MM-DD 或 9月4日 格式")
 
 
 def application_to_line(resource: Resource) -> str:
@@ -222,7 +224,7 @@ class SeminarEditor(tk.Toplevel):
         panel.grid_columnconfigure(3, weight=1)
 
         self._entry_row(panel, 0, "企业 *", self.company_var, column_span=3)
-        self._entry_row(panel, 1, "日期 *", self.date_var, hint="2026-09-04 或 9月4日")
+        self._entry_row(panel, 1, "日期 *", self.date_var, hint="YYYY-MM-DD 或 9月4日")
         self._entry_row(panel, 1, "开始时间 *", self.start_var, start_column=2, hint="15:00")
         self._entry_row(panel, 2, "结束时间", self.end_var, hint="可留空")
         self._entry_row(panel, 2, "地点 *", self.location_var, start_column=2)
@@ -886,4 +888,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
