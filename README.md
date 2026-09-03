@@ -4,7 +4,7 @@
 
 ## 下载
 
-从 [Releases](https://github.com/zxlpdr/seminar-calendar/releases/latest) 下载最新的 `宣讲会日历.exe`，双击即可运行，无需安装 Python。
+从 [Releases](https://github.com/zxlpdr/seminar-calendar/releases/latest) 下载最新的 `seminar-calendar-windows.exe`，双击即可运行，无需安装 Python。
 
 ## 主要功能
 
@@ -19,7 +19,7 @@
 
 ## 使用方法
 
-1. 双击下载的 `宣讲会日历.exe`。
+1. 双击下载的 `seminar-calendar-windows.exe`。
 2. 点击右上角“＋ 导入宣讲会”。
 3. 在上方文本框粘贴一场宣讲会消息，点击“解析消息”。
 4. 检查并按需修改识别结果，然后点击“确认导入”。
@@ -59,4 +59,3 @@ python -m pip install pyinstaller
 ## 许可证
 
 [MIT License](LICENSE)
-
